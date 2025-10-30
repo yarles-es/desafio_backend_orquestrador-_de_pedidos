@@ -1,0 +1,48 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  RECEIVED
+  ENRICHING
+  ENRICHED
+  FAILED_ENRICHMENT
+}
+
+model Order {
+  id               String       @id @default(cuid())
+  externalId       String
+  idempotencyKey   String       @unique
+  currency         String
+  targetCurrency   String
+  total            Decimal      @db.Decimal(18,2)
+  totalConverted   Decimal?     @db.Decimal(18,2)
+  status           OrderStatus  @default(RECEIVED)
+  retryCount       Int          @default(0)
+  failureReason    String?
+  customerEmail    String
+  customerName     String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  items            OrderItem[]
+
+  @@index([externalId])
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  sku        String
+  qty        Int
+  unitPrice  Decimal @db.Decimal(18,2)
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}

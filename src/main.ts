@@ -1,26 +1,29 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
 
-  app.setGlobalPrefix(process.env.GLOBAL_PREFIX || '/api');
+  app.setGlobalPrefix(process.env.GLOBAL_PREFIX ?? 'api');
 
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      transform: true,
       forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  await app.listen(process.env.PORT ? Number(process.env.PORT) : 3000);
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  await app.listen(port);
 
   console.log(`Aplicação iniciada em: ${await app.getUrl()}`);
 }
-bootstrap().catch((error) => {
-  console.error('Erro ao iniciar a aplicação:', error);
 
+bootstrap().catch((err) => {
+  console.error('Erro ao iniciar a aplicação:', err);
   process.exit(1);
 });

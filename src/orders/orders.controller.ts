@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersDto } from './dto/list-orders.dto';
 import { OrdersService } from './orders.service';
@@ -8,6 +16,7 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post('webhooks/orders')
+  @HttpCode(202)
   async receive(@Body() body: CreateOrderDto) {
     const order = await this.ordersService.receiveAndEnqueue(body);
     return { id: order.id, status: order.status };

@@ -1,98 +1,196 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Orquestrador de Pedidos · NestJS + Prisma + BullMQ
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API de **webhook de pedidos** com **processamento assíncrono** via fila, **enriquecimento** chamando
+serviço externo (câmbio), **retries** com **backoff**, **DLQ** (dead-letter queue), **idempotência** e
+**métricas** da fila.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+# Funcionalidades
 
-## Description
+- `POST /webhooks/orders` — recebe pedidos (validação + idempotência)
+- Enfileira para **processamento assíncrono** (BullMQ/Redis)
+- Enriquecimento chamando API externa (ex.: conversão de moeda)
+- **Retries** com backoff exponencial; falhas definitivas vão para **DLQ**
+- `GET /orders` e `GET /orders/:id` — consulta de pedidos
+- `GET /queue/metrics` — métricas básicas da fila
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+# Stacks
 
-## Project setup
+- **NestJS** (API, módulos, validação)
+- **Prisma** + **PostgreSQL** (persistência)
+- **BullMQ** + **Redis** (fila)
+- **Axios** (integração externa)
+- **class-validator / class-transformer** (DTOs)
+
+# Pré-requisitos
+
+- **Node.js** 18+
+- **npm** 10+
+- **PostgreSQL** 13+
+- **Redis** 6/7
+- **Docker**
+
+# Configuração
+
+1. **Clone e instale**
+
+# Orquestrador de Pedidos · NestJS + Prisma + BullMQ
+
+API de **webhook de pedidos** com **processamento assíncrono** via fila, **enriquecimento** chamando
+serviço externo (câmbio), **retries** com **backoff**, **DLQ** (dead-letter queue), **idempotência** e
+**métricas** da fila.
+
+# Funcionalidades
+
+- `POST /webhooks/orders` — recebe pedidos (validação + idempotência)
+- Enfileira para **processamento assíncrono** (BullMQ/Redis)
+- Enriquecimento chamando API externa (ex.: conversão de moeda)
+- **Retries** com backoff exponencial; falhas definitivas vão para **DLQ**
+- `GET /orders` e `GET /orders/:id` — consulta de pedidos
+- `GET /queue/metrics` — métricas básicas da fila
+
+# Stacks
+
+- **NestJS** (API, módulos, validação)
+- **Prisma** + **PostgreSQL** (persistência)
+- **BullMQ** + **Redis** (fila)
+- **Axios** (integração externa)
+- **class-validator / class-transformer** (DTOs)
+
+# Pré-requisitos
+
+- **Node.js** 18+
+- **npm** 10+
+- **PostgreSQL** 13+
+- **Redis** 6/7
+- **Docker**
+
+# Configuração
+
+## 1. Clone e instale dependências
 
 ```bash
-$ npm install
+git clone <repository-url>
+cd desafio_backend_orquestrador-_de_pedidos
+npm install
 ```
 
-## Compile and run the project
+## 2. Configuração de ambiente
+
+Copie o arquivo de exemplo e configure as variáveis:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cp .env.example .env
 ```
 
-## Run tests
+Edite o arquivo `.env` com suas configurações:
+
+```env
+# Server
+PORT=3000
+GLOBAL_PREFIX='/api'
+
+# Database
+DATABASE_URL='postgresql://postgres:postgres@localhost:5432/ordersdb'
+
+# Redis
+REDIS_URL='redis://localhost:6379'
+
+# External API
+TARGET_CURRENCY='BRL'
+EXCHANGE_API_BASE='https://api.frankfurter.dev/v1'
+```
+
+## 3. Configuração do banco de dados (Prisma)
+
+Inicialize o Prisma para configurar e criar o banco de dados:
 
 ```bash
-# unit tests
-$ npm run test
+# Aplica as migrações e cria o banco de dados
+npx prisma migrate dev --name init
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Gera o cliente Prisma
+npx prisma generate
 ```
 
-## Deployment
+> **Nota**: Certifique-se de que o PostgreSQL está rodando e acessível com as credenciais configuradas no arquivo `.env`.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 4. Executando a aplicação
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Desenvolvimento
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+A aplicação será executada em `http://localhost:3000` com prefixo `/api`.
 
-## Resources
+# Endpoints da API
 
-Check out a few resources that may come in handy when working with NestJS:
+## 1. Receber Pedido (Webhook)
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+**POST** `/api/webhooks/orders`
 
-## Support
+### Payload
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```json
+{
+  "order_id": "ext-123",
+  "customer": {
+    "email": "user@example.com",
+    "name": "Ana"
+  },
+  "items": [
+    {
+      "sku": "ABC123",
+      "qty": 2,
+      "unit_price": 59.9
+    }
+  ],
+  "currency": "USD",
+  "idempotency_key": "c3e5f6e8-0d67-4a6c-8b8a-111111111111"
+}
+```
 
-## Stay in touch
+### Resposta
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```json
+{
+  "id": "ord_cuid",
+  "status": "RECEIVED"
+}
+```
 
-## License
+> **Nota**: Utiliza **HTTP 202 Accepted** para indicar que o pedido foi recebido e será processado de forma assíncrona.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## 2. Listar Pedidos
+
+**GET** `/api/orders?status=ENRICHED`
+
+**GET** `/api/orders/:id`
+
+## 3. Métricas da Fila
+
+**GET** `/api/queue/metrics`
+
+### Exemplo de resposta
+
+```json
+{
+  "orders": {
+    "waiting": 2,
+    "active": 1,
+    "completed": 10,
+    "failed": 0,
+    "delayed": 0,
+    "paused": 0
+  },
+  "dlq": {
+    "waiting": 1,
+    "active": 0,
+    "completed": 0,
+    "failed": 0,
+    "delayed": 0,
+    "paused": 0
+  }
+}
+```

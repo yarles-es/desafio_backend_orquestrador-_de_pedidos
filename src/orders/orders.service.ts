@@ -14,6 +14,7 @@ export class OrdersService {
   ) {}
 
   private totalItemsAmount(items: CreateOrderDto['items']) {
+    // poderia ter usado a função toDecimal que está dentro de utils aqui
     return items.reduce(
       (acc, it) => acc.add(new Prisma.Decimal(it.unit_price).mul(it.qty)),
       new Prisma.Decimal(0),
@@ -35,6 +36,7 @@ export class OrdersService {
   }
 
   private async createOrderInTransaction(dto: CreateOrderDto) {
+    // não há nescessidade de usar o transaction aqui, pois o create é atomico dentro do prisma
     const currency = toNormIso4217(dto.currency);
 
     const targetCurrency = toNormIso4217(process.env.TARGET_CURRENCY || 'BRL');
@@ -78,6 +80,8 @@ export class OrdersService {
   }
 
   async receiveAndEnqueue(dto: CreateOrderDto) {
+    // o addOrderQueueJob poderia ter tratamento de erro, mas nesse caso optamos por deixar falhar o processamento do job
+    // poderia ter um status de "PENDING_ENRICHMENT" ou algo do tipo para reprocessar depois
     const order = await this.createOrderInTransaction(dto);
     await this.addOrderQueueJob(order.id);
     return order;
